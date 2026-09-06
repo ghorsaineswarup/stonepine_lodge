@@ -40,10 +40,19 @@
 <script>
 let ALL_ROOMS = [];
 
+const ROOM_IMAGES = {
+  'trailhead-room': '/img/trailhead-room.png',
+  'hearth-cabin': '/img/hearth-cabin.png',
+  'ridge-suite': '/img/ridge-suite.png',
+  'alpine-loft': '/img/alpine-loft.png',
+  'summit-suite': '/img/summit-suite.png',
+};
+
 function roomCardHtml(r) {
+  const img = ROOM_IMAGES[r.slug] || '';
   return `
   <div class="room-card">
-    <div class="room-thumb"></div>
+    <div class="room-thumb">${img ? `<img src="${img}" alt="${r.name}">` : ''}</div>
     <div class="room-body">
       <h3>${r.name}</h3>
       <div class="room-meta"><span>Up to ${r.maxGuests} guests</span><span>${r.bedType}</span></div>

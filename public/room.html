@@ -20,7 +20,7 @@
 <section class="pad" id="rd-body" style="display:none;">
   <div class="wrap rd-grid">
     <div>
-      <div class="rd-gal-main"></div>
+            <div class="rd-gal-main" id="rd-gal-main"></div>
       <h3 style="margin-top:32px;font-size:21px;">About this room</h3>
       <p id="rd-desc" style="margin-top:10px;color:var(--ink-soft);line-height:1.7;font-size:15px;"></p>
       <ul class="rd-amenities" id="rd-amenities"></ul>
@@ -55,6 +55,13 @@ const params = new URLSearchParams(location.search);
 const slug = params.get('slug');
 let ROOM = null;
 
+const ROOM_IMAGES = {
+  'trailhead-room': '/img/trailhead-room.png',
+  'hearth-cabin': '/img/hearth-cabin.png',
+  'ridge-suite': '/img/ridge-suite.png',
+  'alpine-loft': '/img/alpine-loft.png',
+  'summit-suite': '/img/summit-suite.png',
+};
 (async function init() {
   if (!slug) return showNotFound();
   try {
@@ -76,8 +83,12 @@ function render(r) {
   document.getElementById('rd-title').textContent = r.name;
   document.getElementById('rd-sub').textContent = `${r.type} · Sleeps up to ${r.maxGuests} · ${r.bedType}`;
   document.getElementById('rd-desc').textContent = `${r.description} Every stay includes breakfast in the dining hall and standing access to the sauna and Nordic trail network.`;
-  document.getElementById('rd-amenities').innerHTML = r.amenities.map((a) => `<li>${a}</li>`).join('');
+    document.getElementById('rd-amenities').innerHTML = r.amenities.map((a) => `<li>${a}</li>`).join('');
   document.getElementById('rd-price').innerHTML = `${Money(r.pricePerNight)}<small style="font-size:13px;color:var(--ink-soft);"> / night</small>`;
+
+  const img = ROOM_IMAGES[r.slug];
+  document.getElementById('rd-gal-main').innerHTML = img ? `<img src="${img}" alt="${r.name}">` : '';
+
   const gsel = document.getElementById('bk-guests');
   gsel.innerHTML = Array.from({ length: r.maxGuests }, (_, i) => `<option value="${i + 1}">${i + 1} guest${i ? 's' : ''}</option>`).join('');
   document.getElementById('rd-body').style.display = 'block';
