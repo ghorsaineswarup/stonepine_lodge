@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery — Stonepine Lodge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="gallery">
+<div id="header-root"></div>
+
+<div class="pagehead"><div class="wrap">
+  <div class="crumb">Look around</div>
+  <h1>Gallery</h1>
+  <p>The great room, the trailhead, the sauna in the snow - a look at the lodge before you arrive.</p>
+</div></div>
+
+<section class="pad">
+  <div class="wrap gal-grid" id="gal-grid"></div>
+</section>
+
+<div id="footer-root"></div>
+<script src="/js/chrome.js"></script>
+<script>
+const GALLERY = [
+  { name: 'Great Room', img: '/img/gallery/great-room.jpg' },
+  { name: 'Lobby & Hearth', img: '/img/gallery/lobby-hearth.jpg' },
+  { name: 'The Trailhead', img: '/img/gallery/trailhead.jpg' },
+  { name: 'Sauna & Spa', img: '/img/gallery/sauna-spa.jpg' },
+  { name: 'Guest Rooms', img: '/img/gallery/guest-rooms.jpg' },
+  { name: 'Dining Hall', img: '/img/gallery/dining-hall.jpg' },
+  { name: 'Upper Deck', img: '/img/gallery/upper-deck.jpg' },
+  { name: 'Winter Trail', img: '/img/gallery/winter-trail.jpg' },
+];
+
+const grid = document.getElementById('gal-grid');
+grid.innerHTML = GALLERY.map((g, i) => `
+  <div class="gal-tile" data-index="${i}">
+    <img src="${g.img}" alt="${g.name}" onerror="this.remove();">
+    <span>${g.name}</span>
+  </div>
+`).join('');
+
+function openLightbox(index) {
+  const g = GALLERY[index];
+  const bg = document.createElement('div');
+  bg.className = 'lightbox-bg';
+  bg.innerHTML = `
+    <div class="lightbox-box">
+      <button class="lightbox-close" aria-label="Close">&times;</button>
+      <img src="${g.img}" alt="${g.name}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+      <span style="position:relative;z-index:2;">${g.name}</span>
+    </div>`;
+  document.body.appendChild(bg);
+
+  bg.addEventListener('click', (e) => {
+    if (e.target === bg) bg.remove();
+  });
+  bg.querySelector('.lightbox-close').addEventListener('click', () => bg.remove());
+  document.addEventListener('keydown', function escClose(e) {
+    if (e.key === 'Escape') { bg.remove(); document.removeEventListener('keydown', escClose); }
+  });
+}
+
+grid.addEventListener('click', (e) => {
+  const tile = e.target.closest('.gal-tile');
+  if (tile) openLightbox(Number(tile.dataset.index));
+});
+</script>
+</body>
+</html>

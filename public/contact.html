@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — Stonepine Lodge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="contact">
+<div id="header-root"></div>
+
+<div class="pagehead"><div class="wrap">
+  <div class="crumb">Get in touch</div>
+  <h1>Contact</h1>
+  <p>Questions about a stay, a group booking, or the road up to the lodge - we're glad to help.</p>
+</div></div>
+
+<section class="pad">
+  <div class="wrap contact-grid">
+    <div>
+      <div class="info-row"><div><h4>Address</h4><p>412 Elkhorn Pass Road, Larkfield, CO 80439</p></div></div>
+      <div class="info-row"><div><h4>Phone</h4><p>(970) 555-0142, daily 7am–9pm</p></div></div>
+      <div class="info-row"><div><h4>Email</h4><p>stay@stonepinelodge.example</p></div></div>
+    </div>
+    <div class="authcard" style="max-width:none;">
+      <div class="formerror" id="c-error"></div>
+      <div class="formsuccess" id="c-success"></div>
+      <div class="field"><label>Name</label><input type="text" id="c-name"></div>
+      <div class="field"><label>Email</label><input type="email" id="c-email"></div>
+      <div class="field"><label>Message</label><textarea id="c-msg" rows="5"></textarea></div>
+      <button class="btn btn-primary btn-block" id="c-send" style="width:100%;">Send message</button>
+    </div>
+  </div>
+</section>
+
+<div id="footer-root"></div>
+<script src="/js/api.js"></script>
+<script src="/js/chrome.js"></script>
+<script>
+document.getElementById('c-send').addEventListener('click', async () => {
+  const nameEl = document.getElementById('c-name');
+  const emailEl = document.getElementById('c-email');
+  const msgEl = document.getElementById('c-msg');
+  const errorBox = document.getElementById('c-error');
+  const successBox = document.getElementById('c-success');
+  const btn = document.getElementById('c-send');
+
+  errorBox.classList.remove('show');
+  successBox.classList.remove('show');
+
+  const name = nameEl.value.trim();
+  const email = emailEl.value.trim();
+  const message = msgEl.value.trim();
+
+  if (!name || !email || !message) {
+    errorBox.textContent = 'Fill in all fields before sending.';
+    errorBox.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    await api('/messages', { method: 'POST', body: { name, email, message } });
+    successBox.textContent = "Message sent - we'll reply within a day.";
+    successBox.classList.add('show');
+    nameEl.value = '';
+    emailEl.value = '';
+    msgEl.value = '';
+  } catch (err) {
+    errorBox.textContent = err.message || 'Something went wrong - try again.';
+    errorBox.classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Send message';
+});
+</script>
+</body>
+</html>
