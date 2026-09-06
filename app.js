@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
+const roomRoutes = require('./routes/rooms');
 const messageRoutes = require('./routes/messages');
 
 const app = express();
@@ -18,6 +19,7 @@ app.use(async (req, res, next) => {
   }
 });
 
+app.use('/api/rooms', roomRoutes);
 app.use('/api/messages', messageRoutes);
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
