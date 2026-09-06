@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Room — Stonepine Lodge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="rooms">
+<div id="header-root"></div>
+
+<div class="pagehead"><div class="wrap">
+  <div class="crumb"><a href="/rooms.html" style="color:var(--ember-500);">Rooms</a> / <span id="rd-crumb-name">…</span></div>
+  <h1 id="rd-title">Loading…</h1>
+  <p id="rd-sub"></p>
+</div></div>
+
+<section class="pad" id="rd-body" style="display:none;">
+  <div class="wrap rd-grid">
+    <div>
+      <div class="rd-gal-main"></div>
+      <h3 style="margin-top:32px;font-size:21px;">About this room</h3>
+      <p id="rd-desc" style="margin-top:10px;color:var(--ink-soft);line-height:1.7;font-size:15px;"></p>
+      <ul class="rd-amenities" id="rd-amenities"></ul>
+    </div>
+    <div class="booking-box">
+      <div class="price" id="rd-price"></div>
+      <div class="field" style="margin-top:16px;">
+        <label>Check in</label>
+        <input type="date" id="bk-checkin">
+      </div>
+      <div class="field">
+        <label>Check out</label>
+        <input type="date" id="bk-checkout">
+      </div>
+      <div class="field">
+        <label>Guests</label>
+        <select id="bk-guests"></select>
+      </div>
+      <button class="btn btn-primary btn-block" id="bk-go" style="width:100%;margin-top:6px;">Continue to booking</button>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:12px;text-align:center;">You won't be charged yet. Availability checking comes later this week.</p>
+    </div>
+  </div>
+</section>
+
+<div class="empty" id="rd-notfound" style="display:none;"><h3>Room not found</h3><p>Try browsing all rooms instead.</p><div style="margin-top:14px;"><a href="/rooms.html" class="btn btn-primary">Browse rooms</a></div></div>
+
+<div id="footer-root"></div>
+<script src="/js/api.js"></script>
+<script src="/js/chrome.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const slug = params.get('slug');
+let ROOM = null;
+
+(async function init() {
+  if (!slug) return showNotFound();
+  try {
+    const { room } = await api(`/rooms/${slug}`);
+    ROOM = room;
+    render(room);
+  } catch (err) {
+    showNotFound();
+  }
+})();
+
+function showNotFound() {
+  document.getElementById('rd-notfound').style.display = 'block';
+  document.getElementById('rd-title').textContent = 'Room not found';
+}
+
+function render(r) {
+  document.getElementById('rd-crumb-name').textContent = r.name;
+  document.getElementById('rd-title').textContent = r.name;
+  document.getElementById('rd-sub').textContent = `${r.type} · Sleeps up to ${r.maxGuests} · ${r.bedType}`;
+  document.getElementById('rd-desc').textContent = `${r.description} Every stay includes breakfast in the dining hall and standing access to the sauna and Nordic trail network.`;
+  document.getElementById('rd-amenities').innerHTML = r.amenities.map((a) => `<li>${a}</li>`).join('');
+  document.getElementById('rd-price').innerHTML = `${Money(r.pricePerNight)}<small style="font-size:13px;color:var(--ink-soft);"> / night</small>`;
+  const gsel = document.getElementById('bk-guests');
+  gsel.innerHTML = Array.from({ length: r.maxGuests }, (_, i) => `<option value="${i + 1}">${i + 1} guest${i ? 's' : ''}</option>`).join('');
+  document.getElementById('rd-body').style.display = 'block';
+
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('bk-checkin').min = today;
+  document.getElementById('bk-checkout').min = today;
+}
+
+document.getElementById('bk-go').addEventListener('click', () => {
+  const checkIn = document.getElementById('bk-checkin').value;
+  const checkOut = document.getElementById('bk-checkout').value;
+  const guests = document.getElementById('bk-guests').value;
+  if (!checkIn || !checkOut) { showToast('Pick your check-in and check-out dates.'); return; }
+  showToast('Booking flow (with real availability + pricing) is coming later this week.');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rooms & Cabins — Stonepine Lodge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="rooms">
+<div id="header-root"></div>
+
+<div class="pagehead"><div class="wrap">
+  <div class="crumb">Accommodations</div>
+  <h1>Rooms &amp; cabins</h1>
+  <p>Every room looks out onto the ridge or the pines. Filter by size or price - results come live from the database.</p>
+</div></div>
+
+<section class="pad">
+  <div class="wrap">
+    <div class="filterbar">
+      <label>Guests
+        <select id="f-guests"><option value="0">Any</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select>
+      </label>
+      <label>Max price / night
+        <input id="f-price" type="range" min="150" max="500" value="500" step="10">
+      </label>
+      <span id="f-price-val" style="font-size:13px;color:var(--ink-soft);">Up to $500</span>
+    </div>
+    <div class="room-grid" id="room-grid">
+      <div class="empty"><span class="spinner"></span> Loading rooms…</div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-root"></div>
+<script src="/js/api.js"></script>
+<script src="/js/chrome.js"></script>
+<script>
+let ALL_ROOMS = [];
+
+function roomCardHtml(r) {
+  return `
+  <div class="room-card">
+    <div class="room-thumb"></div>
+    <div class="room-body">
+      <h3>${r.name}</h3>
+      <div class="room-meta"><span>Up to ${r.maxGuests} guests</span><span>${r.bedType}</span></div>
+      <p class="room-desc">${r.description}</p>
+      <div class="room-foot">
+        <div class="price">${Money(r.pricePerNight)}<small> / night</small></div>
+        <a href="/room.html?slug=${r.slug}" class="btn btn-outline btn-sm">View details</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+function applyFilters() {
+  const g = parseInt(document.getElementById('f-guests').value, 10);
+  const p = parseInt(document.getElementById('f-price').value, 10);
+  document.getElementById('f-price-val').textContent = 'Up to ' + Money(p);
+  const filtered = ALL_ROOMS.filter((r) => r.maxGuests >= g && r.pricePerNight <= p);
+  const grid = document.getElementById('room-grid');
+  grid.innerHTML = filtered.length
+    ? filtered.map(roomCardHtml).join('')
+    : `<div class="empty" style="grid-column:1/-1;"><h3>No rooms match</h3><p>Try widening your filters.</p></div>`;
+}
+
+(async function init() {
+  try {
+    const { rooms } = await api('/rooms');
+    ALL_ROOMS = rooms;
+    applyFilters();
+  } catch (err) {
+    document.getElementById('room-grid').innerHTML = `<div class="empty"><h3>Could not load rooms</h3><p>${err.message}</p></div>`;
+  }
+  document.getElementById('f-guests').addEventListener('change', applyFilters);
+  document.getElementById('f-price').addEventListener('input', applyFilters);
+})();
+</script>
+</body>
+</html>
