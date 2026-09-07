@@ -25,16 +25,15 @@
 <script src="/js/chrome.js"></script>
 <script>
 const GALLERY = [
-  { name: 'Great Room', img: '/img/gallery/great-room.jpg' },
-  { name: 'Lobby & Hearth', img: '/img/gallery/lobby-hearth.jpg' },
-  { name: 'The Trailhead', img: '/img/gallery/trailhead.jpg' },
-  { name: 'Sauna & Spa', img: '/img/gallery/sauna-spa.jpg' },
-  { name: 'Guest Rooms', img: '/img/gallery/guest-rooms.jpg' },
-  { name: 'Dining Hall', img: '/img/gallery/dining-hall.jpg' },
-  { name: 'Upper Deck', img: '/img/gallery/upper-deck.jpg' },
-  { name: 'Winter Trail', img: '/img/gallery/winter-trail.jpg' },
+  { name: 'Great Room', img: '/img/great-room.png' },
+  { name: 'Lobby & Hearth', img: '/img/lobby-hearth.png' },
+  { name: 'The Trailhead', img: '/img/trailhead.png' },
+  { name: 'Sauna & Spa', img: '/img/sauna-spa.png' },
+  { name: 'Guest Rooms', img: '/img/guest-rooms.png' },
+  { name: 'Dining Hall', img: '/img/dining-hall.png' },
+  { name: 'Upper Deck', img: '/img/upper-deck.png' },
+  { name: 'Winter Trail', img: '/img/winter-trail.png' },
 ];
-
 const grid = document.getElementById('gal-grid');
 grid.innerHTML = GALLERY.map((g, i) => `
   <div class="gal-tile" data-index="${i}">
