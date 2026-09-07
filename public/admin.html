@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Stonepine Lodge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="admin">
+<div id="header-root"></div>
+
+<div class="pagehead"><div class="wrap">
+  <div class="crumb">Admin</div>
+  <h1>Dashboard</h1>
+  <p id="admin-sub"></p>
+</div></div>
+
+<section class="pad">
+  <div class="wrap">
+    <div class="empty" id="admin-body">
+      <h3>Dashboard coming soon</h3>
+      <p>Bookings, revenue, and room management will appear here once the admin dashboard is built.</p>
+    </div>
+  </div>
+</section>
+
+<div id="footer-root"></div>
+<script src="/js/api.js"></script>
+<script src="/js/chrome.js"></script>
+<script>
+(function init() {
+  if (!requireAuth()) return;
+  const user = getUser();
+  if (!user || user.role !== 'admin') {
+    document.getElementById('admin-body').innerHTML = '<h3>Admin access required</h3><p>This page is for lodge administrators only.</p>';
+    return;
+  }
+  document.getElementById('admin-sub').textContent = `Signed in as ${user.name} · Administrator`;
+})();
+</script>
+</body>
+</html>

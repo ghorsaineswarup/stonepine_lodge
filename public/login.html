@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in — Stonepine Lodge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="login">
+<div id="header-root"></div>
+
+<section class="pad">
+  <div class="wrap">
+    <div class="authcard">
+      <h2 style="font-size:26px;margin-bottom:8px;">Welcome back</h2>
+      <p style="color:var(--ink-soft);font-size:14px;margin-bottom:24px;">Log in to see your bookings or manage the lodge.</p>
+      <div class="formerror" id="l-error"></div>
+      <div class="field"><label>Email</label><input type="email" id="l-email" placeholder="you@example.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="l-pass" placeholder="••••••••"></div>
+      <button class="btn btn-primary btn-block" id="l-submit" style="width:100%;">Log in</button>
+      <div class="authswitch" style="text-align:center;margin-top:18px;font-size:13.5px;color:var(--ink-soft);">New here? <a href="/register.html" style="color:var(--ember-600);font-weight:600;">Create an account</a></div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-root"></div>
+<script src="/js/api.js"></script>
+<script src="/js/chrome.js"></script>
+<script>
+document.getElementById('l-submit').addEventListener('click', async () => {
+  const email = document.getElementById('l-email').value.trim();
+  const password = document.getElementById('l-pass').value;
+  const errorBox = document.getElementById('l-error');
+  const btn = document.getElementById('l-submit');
+
+  errorBox.classList.remove('show');
+  if (!email || !password) {
+    errorBox.textContent = 'Enter your email and password.';
+    errorBox.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Logging in…';
+  try {
+    const { token, user } = await api('/auth/login', { method: 'POST', body: { email, password } });
+    setSession(token, user);
+    const params = new URLSearchParams(location.search);
+    const next = params.get('next');
+    window.location.href = next || (user.role === 'admin' ? '/admin.html' : '/account.html');
+  } catch (err) {
+    errorBox.textContent = err.message || 'Login failed - try again.';
+    errorBox.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Log in';
+  }
+});
+</script>
+</body>
+</html>

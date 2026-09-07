@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account — Stonepine Lodge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="account">
+<div id="header-root"></div>
+
+<div class="pagehead"><div class="wrap">
+  <div class="crumb">My account</div>
+  <h1 id="acct-title">Welcome</h1>
+  <p>Your bookings will show up here once the booking system is live.</p>
+</div></div>
+
+<section class="pad">
+  <div class="wrap">
+    <div class="empty">
+      <h3>No bookings yet</h3>
+      <p>When you book a room, it'll show up here.</p>
+      <div style="margin-top:18px;"><a href="/rooms.html" class="btn btn-primary">Browse rooms</a></div>
+    </div>
+  </div>
+</section>
+
+<div id="footer-root"></div>
+<script src="/js/api.js"></script>
+<script src="/js/chrome.js"></script>
+<script>
+if (requireAuth()) {
+  const user = getUser();
+  document.getElementById('acct-title').textContent = `Welcome, ${user.name.split(' ')[0]}`;
+}
+</script>
+</body>
+</html>

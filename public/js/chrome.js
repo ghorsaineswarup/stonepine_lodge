@@ -2,6 +2,7 @@ function renderChrome() {
   const headerRoot = document.getElementById('header-root');
   const footerRoot = document.getElementById('footer-root');
   const page = document.body.dataset.page || '';
+  const user = getUser();
 
   const navLink = (href, label, key) =>
     `<a href="${href}" class="${page === key ? 'active' : ''}">${label}</a>`;
@@ -19,11 +20,22 @@ function renderChrome() {
           ${navLink('/contact.html', 'Contact', 'contact')}
         </nav>
         <div class="navcta">
-          <a href="/login.html" class="btn btn-ghost">Log in</a>
+          ${user
+            ? `<a href="${user.role === 'admin' ? '/admin.html' : '/account.html'}" class="btn btn-ghost">${user.name.split(' ')[0]}${user.role === 'admin' ? ' · Admin' : ''}</a>
+               <button class="btn btn-ghost" id="logout-btn">Log out</button>`
+            : `<a href="/login.html" class="btn btn-ghost">Log in</a>`}
           <a href="/rooms.html" class="btn btn-primary">Book now</a>
         </div>
       </div>
     </header>`;
+
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        clearSession();
+        window.location.href = '/index.html';
+      });
+    }
   }
 
   if (footerRoot) {
@@ -61,12 +73,21 @@ function renderChrome() {
     </footer>`;
   }
 }
+
 function showToast(msg, ms = 2800) {
   const el = document.createElement('div');
   el.className = 'toast';
   el.textContent = msg;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), ms);
+}
+
+function requireAuth(redirectTo = '/login.html') {
+  if (!getToken()) {
+    window.location.href = `${redirectTo}?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    return false;
+  }
+  return true;
 }
 
 document.addEventListener('DOMContentLoaded', renderChrome);
