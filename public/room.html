@@ -20,7 +20,7 @@
 <section class="pad" id="rd-body" style="display:none;">
   <div class="wrap rd-grid">
     <div>
-            <div class="rd-gal-main" id="rd-gal-main"></div>
+      <div class="rd-gal-main" id="rd-gal-main"></div>
       <h3 style="margin-top:32px;font-size:21px;">About this room</h3>
       <p id="rd-desc" style="margin-top:10px;color:var(--ink-soft);line-height:1.7;font-size:15px;"></p>
       <ul class="rd-amenities" id="rd-amenities"></ul>
@@ -39,8 +39,9 @@
         <label>Guests</label>
         <select id="bk-guests"></select>
       </div>
-      <button class="btn btn-primary btn-block" id="bk-go" style="width:100%;margin-top:6px;">Continue to booking</button>
-      <p style="font-size:12px;color:var(--ink-soft);margin-top:12px;text-align:center;">You won't be charged yet. Availability checking comes later this week.</p>
+      <div id="avail-result"></div>
+      <button class="btn btn-primary btn-block" id="bk-go" style="width:100%;margin-top:6px;">Check availability</button>
+      <p style="font-size:12px;color:var(--ink-soft);margin-top:12px;text-align:center;">You won't be charged yet.</p>
     </div>
   </div>
 </section>
@@ -62,6 +63,7 @@ const ROOM_IMAGES = {
   'alpine-loft': '/img/alpine-loft.png',
   'summit-suite': '/img/summit-suite.png',
 };
+
 (async function init() {
   if (!slug) return showNotFound();
   try {
@@ -83,7 +85,7 @@ function render(r) {
   document.getElementById('rd-title').textContent = r.name;
   document.getElementById('rd-sub').textContent = `${r.type} · Sleeps up to ${r.maxGuests} · ${r.bedType}`;
   document.getElementById('rd-desc').textContent = `${r.description} Every stay includes breakfast in the dining hall and standing access to the sauna and Nordic trail network.`;
-    document.getElementById('rd-amenities').innerHTML = r.amenities.map((a) => `<li>${a}</li>`).join('');
+  document.getElementById('rd-amenities').innerHTML = r.amenities.map((a) => `<li>${a}</li>`).join('');
   document.getElementById('rd-price').innerHTML = `${Money(r.pricePerNight)}<small style="font-size:13px;color:var(--ink-soft);"> / night</small>`;
 
   const img = ROOM_IMAGES[r.slug];
@@ -98,12 +100,48 @@ function render(r) {
   document.getElementById('bk-checkout').min = today;
 }
 
-document.getElementById('bk-go').addEventListener('click', () => {
+let AVAILABILITY_CONFIRMED = false;
+
+document.getElementById('bk-go').addEventListener('click', async () => {
   const checkIn = document.getElementById('bk-checkin').value;
   const checkOut = document.getElementById('bk-checkout').value;
   const guests = document.getElementById('bk-guests').value;
+  const resultBox = document.getElementById('avail-result');
+  const btn = document.getElementById('bk-go');
+
   if (!checkIn || !checkOut) { showToast('Pick your check-in and check-out dates.'); return; }
-  showToast('Booking flow (with real availability + pricing) is coming later this week.');
+
+  if (AVAILABILITY_CONFIRMED) {
+    const q = new URLSearchParams({ slug: ROOM.slug, checkIn, checkOut, guests });
+    window.location.href = `/booking.html?${q.toString()}`;
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  resultBox.innerHTML = '';
+  try {
+    const res = await api(`/rooms/${ROOM._id}/availability?checkIn=${checkIn}&checkOut=${checkOut}`);
+    if (res.available) {
+      resultBox.innerHTML = `<div class="avail-note ok">Available - ${res.unitsLeft} of ${res.totalUnits} left for ${res.nights} night${res.nights === 1 ? '' : 's'}.</div>`;
+      btn.textContent = 'Continue to booking';
+      AVAILABILITY_CONFIRMED = true;
+    } else {
+      resultBox.innerHTML = `<div class="avail-note bad">Fully booked for those dates - try a different range.</div>`;
+      btn.textContent = 'Check availability';
+    }
+  } catch (err) {
+    resultBox.innerHTML = `<div class="avail-note bad">${err.message}</div>`;
+    btn.textContent = 'Check availability';
+  }
+  btn.disabled = false;
+});
+
+['bk-checkin', 'bk-checkout', 'bk-guests'].forEach((id) => {
+  document.getElementById(id).addEventListener('change', () => {
+    AVAILABILITY_CONFIRMED = false;
+    document.getElementById('bk-go').textContent = 'Check availability';
+  });
 });
 </script>
 </body>

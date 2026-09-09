@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book your stay — Stonepine Lodge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body data-page="booking">
+<div id="header-root"></div>
+
+<div class="pagehead"><div class="wrap">
+  <div class="crumb" id="bk-crumb">Book</div>
+  <h1>Book your stay</h1>
+</div></div>
+
+<section class="pad">
+  <div class="wrap" style="max-width:640px;">
+    <div class="steps">
+      <div class="step" id="step-label-1">1. Dates &amp; guests</div>
+      <div class="step" id="step-label-2">2. Your details</div>
+      <div class="step" id="step-label-3">3. Confirm</div>
+    </div>
+
+    <div class="empty" id="bk-loading"><span class="spinner"></span> Loading room…</div>
+    <div class="empty" id="bk-notfound" style="display:none;"><h3>Room not found</h3><p><a href="/rooms.html" class="btn btn-primary">Browse rooms</a></p></div>
+
+    <div class="authcard" id="bk-wizard" style="max-width:none;display:none;">
+
+      <div id="step-1">
+        <div class="rowgap">
+          <div class="field"><label>Check in</label><input type="date" id="d-checkin"></div>
+          <div class="field"><label>Check out</label><input type="date" id="d-checkout"></div>
+        </div>
+        <div class="field"><label>Guests</label><select id="d-guests"></select></div>
+        <div id="d-avail-result"></div>
+        <button class="btn btn-primary btn-block" id="step1-next" style="width:100%;margin-top:10px;">Check availability</button>
+      </div>
+
+      <div id="step-2" style="display:none;">
+        <div class="formerror" id="step2-error"></div>
+        <div class="field"><label>Full name</label><input type="text" id="d-name"></div>
+        <div class="field"><label>Email</label><input type="email" id="d-email"></div>
+        <div class="field"><label>Phone</label><input type="tel" id="d-phone"></div>
+        <button class="btn btn-primary btn-block" id="step2-next" style="width:100%;">Review booking</button>
+        <button class="btn btn-ghost btn-block" id="step2-back" style="width:100%;margin-top:8px;">Back</button>
+      </div>
+
+      <div id="step-3" style="display:none;">
+        <div class="formerror" id="step3-error"></div>
+        <div id="step3-summary"></div>
+        <button class="btn btn-primary btn-block" id="step3-confirm" style="width:100%;margin-top:14px;">Confirm booking</button>
+        <button class="btn btn-ghost btn-block" id="step3-back" style="width:100%;margin-top:8px;">Back</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div id="footer-root"></div>
+<script src="/js/api.js"></script>
+<script src="/js/chrome.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const slug = params.get('slug');
+let ROOM = null;
+let AVAIL = null;
+let currentStep = 1;
+
+(async function init() {
+  if (!requireAuth()) return;
+  if (!slug) { showNotFoundState(); return; }
+  try {
+    const { room } = await api(`/rooms/${slug}`);
+    ROOM = room;
+    document.getElementById('bk-crumb').innerHTML = `<a href="/room.html?slug=${room.slug}" style="color:var(--ember-500);">${room.name}</a> / Book`;
+
+    const gsel = document.getElementById('d-guests');
+    gsel.innerHTML = Array.from({ length: room.maxGuests }, (_, i) => `<option value="${i + 1}">${i + 1} guest${i ? 's' : ''}</option>`).join('');
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('d-checkin').min = today;
+    document.getElementById('d-checkout').min = today;
+    if (params.get('checkIn')) document.getElementById('d-checkin').value = params.get('checkIn');
+    if (params.get('checkOut')) document.getElementById('d-checkout').value = params.get('checkOut');
+    if (params.get('guests')) gsel.value = params.get('guests');
+
+    const user = getUser();
+    if (user) {
+      document.getElementById('d-name').value = user.name;
+      document.getElementById('d-email').value = user.email;
+    }
+
+    document.getElementById('bk-loading').style.display = 'none';
+    document.getElementById('bk-wizard').style.display = 'block';
+    updateStepHighlight();
+  } catch (err) {
+    showNotFoundState();
+  }
+})();
+
+function showNotFoundState() {
+  document.getElementById('bk-loading').style.display = 'none';
+  document.getElementById('bk-notfound').style.display = 'block';
+}
+
+function updateStepHighlight() {
+  [1, 2, 3].forEach((n) => {
+    const el = document.getElementById(`step-label-${n}`);
+    el.classList.remove('active', 'done');
+    if (n === currentStep) el.classList.add('active');
+    else if (n < currentStep) el.classList.add('done');
+  });
+}
+
+function goToStep(n) {
+  [1, 2, 3].forEach((i) => { document.getElementById(`step-${i}`).style.display = i === n ? 'block' : 'none'; });
+  currentStep = n;
+  updateStepHighlight();
+}
+
+document.getElementById('step1-next').addEventListener('click', async () => {
+  const checkIn = document.getElementById('d-checkin').value;
+  const checkOut = document.getElementById('d-checkout').value;
+  const resultBox = document.getElementById('d-avail-result');
+  const btn = document.getElementById('step1-next');
+
+  if (!checkIn || !checkOut) { showToast('Pick your check-in and check-out dates.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  resultBox.innerHTML = '';
+  try {
+    const res = await api(`/rooms/${ROOM._id}/availability?checkIn=${checkIn}&checkOut=${checkOut}`);
+    if (res.available) {
+      AVAIL = { nights: res.nights, pricePerNight: res.pricePerNight, checkIn, checkOut };
+      goToStep(2);
+    } else {
+      resultBox.innerHTML = `<div class="avail-note bad">Fully booked for those dates - try a different range.</div>`;
+    }
+  } catch (err) {
+    resultBox.innerHTML = `<div class="avail-note bad">${err.message}</div>`;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Check availability';
+});
+
+document.getElementById('step2-next').addEventListener('click', () => {
+  const errorBox = document.getElementById('step2-error');
+  errorBox.classList.remove('show');
+  const name = document.getElementById('d-name').value.trim();
+  const email = document.getElementById('d-email').value.trim();
+  if (!name || !email) {
+    errorBox.textContent = 'Add your name and email to continue.';
+    errorBox.classList.add('show');
+    return;
+  }
+  renderSummary();
+  goToStep(3);
+});
+document.getElementById('step2-back').addEventListener('click', () => goToStep(1));
+document.getElementById('step3-back').addEventListener('click', () => goToStep(2));
+
+function renderSummary() {
+  const guests = document.getElementById('d-guests').value;
+  const subtotal = AVAIL.nights * AVAIL.pricePerNight;
+  const fees = Math.round(subtotal * 0.11);
+  const total = subtotal + fees;
+  document.getElementById('step3-summary').innerHTML = `
+    <div class="summary-line"><span>${ROOM.name}</span><span>${AVAIL.checkIn} → ${AVAIL.checkOut}</span></div>
+    <div class="summary-line"><span>Guests</span><span>${guests}</span></div>
+    <div class="summary-line"><span>${Money(AVAIL.pricePerNight)} × ${AVAIL.nights} night${AVAIL.nights === 1 ? '' : 's'}</span><span>${Money(subtotal)}</span></div>
+    <div class="summary-line"><span>Taxes &amp; fees</span><span>${Money(fees)}</span></div>
+    <div class="summary-line total"><span>Total</span><span>${Money(total)}</span></div>
+  `;
+}
+
+document.getElementById('step3-confirm').addEventListener('click', async () => {
+  const errorBox = document.getElementById('step3-error');
+  const btn = document.getElementById('step3-confirm');
+  errorBox.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Confirming…';
+  try {
+    const { booking } = await api('/bookings', {
+      method: 'POST',
+      auth: true,
+      body: {
+        roomId: ROOM._id,
+        checkIn: AVAIL.checkIn,
+        checkOut: AVAIL.checkOut,
+        guests: document.getElementById('d-guests').value,
+        guestName: document.getElementById('d-name').value.trim(),
+        guestEmail: document.getElementById('d-email').value.trim(),
+        guestPhone: document.getElementById('d-phone').value.trim(),
+      },
+    });
+    showToast('Booking confirmed - see it under My Account.');
+    window.location.href = '/account.html';
+  } catch (err) {
+    errorBox.textContent = err.message || 'Could not complete booking - try again.';
+    errorBox.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Confirm booking';
+  }
+});
+</script>
+</body>
+</html>

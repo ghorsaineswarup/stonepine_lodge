@@ -1,9 +1,9 @@
 const express = require('express');
 const Room = require('../models/Room');
+const { getAvailability } = require('../utils/availability');
 
 const router = express.Router();
 
-// GET /api/rooms - public, supports ?guests= and ?maxPrice= filters
 router.get('/', async (req, res) => {
   try {
     const query = { active: true };
@@ -17,7 +17,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/rooms/:slug - public, room detail by slug
 router.get('/:slug', async (req, res) => {
   try {
     const room = await Room.findOne({ slug: req.params.slug, active: true });
@@ -25,6 +24,25 @@ router.get('/:slug', async (req, res) => {
     res.json({ room });
   } catch (err) {
     res.status(500).json({ message: 'Could not load room', error: err.message });
+  }
+});
+
+router.get('/:id/availability', async (req, res) => {
+  try {
+    const { checkIn, checkOut } = req.query;
+    if (!checkIn || !checkOut) {
+      return res.status(400).json({ message: 'checkIn and checkOut query params are required' });
+    }
+    const result = await getAvailability(req.params.id, checkIn, checkOut);
+    res.json({
+      available: result.available,
+      unitsLeft: result.unitsLeft,
+      totalUnits: result.totalUnits,
+      nights: result.nights,
+      pricePerNight: result.room.pricePerNight,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ message: err.message });
   }
 });
 

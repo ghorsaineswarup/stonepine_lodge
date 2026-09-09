@@ -14,16 +14,12 @@
 <div class="pagehead"><div class="wrap">
   <div class="crumb">My account</div>
   <h1 id="acct-title">Welcome</h1>
-  <p>Your bookings will show up here once the booking system is live.</p>
+  <p id="acct-sub"></p>
 </div></div>
 
 <section class="pad">
-  <div class="wrap">
-    <div class="empty">
-      <h3>No bookings yet</h3>
-      <p>When you book a room, it'll show up here.</p>
-      <div style="margin-top:18px;"><a href="/rooms.html" class="btn btn-primary">Browse rooms</a></div>
-    </div>
+  <div class="wrap" id="acct-body">
+    <div class="empty"><span class="spinner"></span> Loading your bookings…</div>
   </div>
 </section>
 
@@ -31,9 +27,75 @@
 <script src="/js/api.js"></script>
 <script src="/js/chrome.js"></script>
 <script>
-if (requireAuth()) {
+(async function init() {
+  if (!requireAuth()) return;
   const user = getUser();
   document.getElementById('acct-title').textContent = `Welcome, ${user.name.split(' ')[0]}`;
+
+  try {
+    const { bookings } = await api('/bookings/my', { auth: true });
+    document.getElementById('acct-sub').textContent = `${bookings.length} booking${bookings.length === 1 ? '' : 's'} on file.`;
+    render(bookings);
+  } catch (err) {
+    document.getElementById('acct-body').innerHTML = `<div class="empty"><h3>Could not load bookings</h3><p>${err.message}</p></div>`;
+  }
+})();
+
+function statusBadge(status) {
+  return `<span class="badge ${status}">${status}</span>`;
+}
+
+function render(bookings) {
+  const body = document.getElementById('acct-body');
+  if (!bookings.length) {
+    body.innerHTML = `
+      <div class="empty">
+        <h3>No bookings yet</h3>
+        <p>When you book a room, it'll show up here.</p>
+        <div style="margin-top:18px;"><a href="/rooms.html" class="btn btn-primary">Browse rooms</a></div>
+      </div>`;
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="admincard">
+      <div class="tablewrap">
+        <table class="admin">
+          <thead><tr><th>Room</th><th>Check in</th><th>Check out</th><th>Guests</th><th>Total</th><th>Status</th><th></th></tr></thead>
+          <tbody id="acct-rows"></tbody>
+        </table>
+      </div>
+    </div>`;
+
+  const rows = document.getElementById('acct-rows');
+  rows.innerHTML = bookings.map((b) => `
+    <tr>
+      <td>${b.room ? b.room.name : 'Room'}</td>
+      <td>${new Date(b.checkIn).toLocaleDateString()}</td>
+      <td>${new Date(b.checkOut).toLocaleDateString()}</td>
+      <td>${b.guests}</td>
+      <td>${Money(b.total)}</td>
+      <td>${statusBadge(b.status)}</td>
+      <td>${b.status !== 'cancelled' ? `<button class="btn btn-ghost btn-sm cancel-btn" data-id="${b._id}">Cancel</button>` : ''}</td>
+    </tr>
+  `).join('');
+
+  rows.querySelectorAll('.cancel-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Cancelling…';
+      try {
+        await api(`/bookings/${btn.dataset.id}/cancel`, { method: 'PATCH', auth: true });
+        showToast('Booking cancelled.');
+        const { bookings } = await api('/bookings/my', { auth: true });
+        render(bookings);
+      } catch (err) {
+        showToast(err.message || 'Could not cancel booking.');
+        btn.disabled = false;
+        btn.textContent = 'Cancel';
+      }
+    });
+  });
 }
 </script>
 </body>

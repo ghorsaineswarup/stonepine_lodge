@@ -5,6 +5,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/rooms');
 const messageRoutes = require('./routes/messages');
+const bookingRoutes = require('./routes/bookings');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use(async (req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/bookings', bookingRoutes);
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
 app.use(express.static(path.join(__dirname, 'public')));
