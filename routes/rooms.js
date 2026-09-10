@@ -1,5 +1,7 @@
 const express = require('express');
 const Room = require('../models/Room');
+const Booking = require('../models/Booking');
+const { protect, adminOnly } = require('../middleware/auth');
 const { getAvailability } = require('../utils/availability');
 
 const router = express.Router();
@@ -43,6 +45,46 @@ router.get('/:id/availability', async (req, res) => {
     });
   } catch (err) {
     res.status(err.statusCode || 500).json({ message: err.message });
+  }
+});
+
+router.post('/', protect, adminOnly, async (req, res) => {
+  try {
+    const room = await Room.create(req.body);
+    res.status(201).json({ room });
+  } catch (err) {
+    if (err.code === 11000) return res.status(409).json({ message: 'A room with that slug already exists' });
+    res.status(400).json({ message: 'Could not create room', error: err.message });
+  }
+});
+
+router.put('/:id', protect, adminOnly, async (req, res) => {
+  try {
+    const room = await Room.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!room) return res.status(404).json({ message: 'Room not found' });
+    res.json({ room });
+  } catch (err) {
+    res.status(400).json({ message: 'Could not update room', error: err.message });
+  }
+});
+
+router.delete('/:id', protect, adminOnly, async (req, res) => {
+  try {
+    const activeBookings = await Booking.countDocuments({
+      room: req.params.id,
+      status: { $ne: 'cancelled' },
+      checkOut: { $gte: new Date() },
+    });
+    if (activeBookings > 0) {
+      return res.status(409).json({
+        message: `Cannot delete: ${activeBookings} upcoming booking(s) reference this room. Deactivate instead.`,
+      });
+    }
+    const room = await Room.findByIdAndUpdate(req.params.id, { active: false }, { new: true });
+    if (!room) return res.status(404).json({ message: 'Room not found' });
+    res.json({ message: 'Room deactivated', room });
+  } catch (err) {
+    res.status(500).json({ message: 'Could not delete room', error: err.message });
   }
 });
 

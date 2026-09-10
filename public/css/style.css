@@ -602,3 +602,23 @@ table.admin{width:100%;border-collapse:collapse;font-size:13.5px;}
 table.admin th{text-align:left;font-size:11.5px;color:var(--ink-soft);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line);}
 table.admin td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle;}
 table.admin tr:hover td{background:var(--stone-100);}
+
+
+/* ============================================================
+   DAY 6 ADDITIONS — Admin dashboard
+   ============================================================ */
+
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:40px;}
+@media(max-width:800px){.stat-grid{grid-template-columns:1fr 1fr;}}
+.stat-card{background:var(--stone-100);border:1px solid var(--line);padding:24px;}
+.stat-card .num{font-family:'Fraunces',serif;font-size:32px;color:var(--pine-950);}
+.stat-card .lbl{font-size:12.5px;color:var(--ink-soft);margin-top:4px;}
+
+.admintabs{display:flex;gap:26px;margin-bottom:30px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+.admintabs button{background:none;border:none;padding:0 0 14px;font-size:14.5px;color:var(--ink-soft);font-weight:600;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;}
+.admintabs button.active{color:var(--pine-950);border-color:var(--ember-500);}
+
+.admincard-head{display:flex;justify-content:space-between;align-items:center;padding:20px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:10px;}
+
+.modal-bg{position:fixed;inset:0;background:rgba(20,31,25,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+.modal{background:var(--stone-50);max-width:440px;width:100%;padding:32px;margin:auto;}

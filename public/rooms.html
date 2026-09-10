@@ -40,7 +40,7 @@
 <script>
 let ALL_ROOMS = [];
 
-const ROOM_IMAGES = {
+const LEGACY_IMAGES = {
   'trailhead-room': '/img/trailhead-room.png',
   'hearth-cabin': '/img/hearth-cabin.png',
   'ridge-suite': '/img/ridge-suite.png',
@@ -49,7 +49,7 @@ const ROOM_IMAGES = {
 };
 
 function roomCardHtml(r) {
-  const img = ROOM_IMAGES[r.slug] || '';
+  const img = r.image || LEGACY_IMAGES[r.slug] || '';
   return `
   <div class="room-card">
     <div class="room-thumb">${img ? `<img src="${img}" alt="${r.name}">` : ''}</div>

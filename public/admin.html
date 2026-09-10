@@ -17,28 +17,281 @@
   <p id="admin-sub"></p>
 </div></div>
 
-<section class="pad">
+<section class="pad" id="admin-content" style="display:none;">
   <div class="wrap">
-    <div class="empty" id="admin-body">
-      <h3>Dashboard coming soon</h3>
-      <p>Bookings, revenue, and room management will appear here once the admin dashboard is built.</p>
+    <div class="stat-grid" id="stat-grid"></div>
+
+    <div class="admintabs">
+      <button data-tab="bookings" class="active">Bookings</button>
+      <button data-tab="rooms">Rooms</button>
+      <button data-tab="messages">Messages</button>
     </div>
+
+    <div id="tab-body"></div>
   </div>
 </section>
+
+<div class="empty" id="admin-denied" style="display:none;">
+  <h3>Admin access required</h3>
+  <p>This page is for lodge administrators only.</p>
+</div>
+
+<div class="modal-bg" id="room-modal-bg" style="display:none;">
+  <div class="modal">
+    <h3 id="room-modal-title" style="font-size:20px;margin-bottom:16px;">Add room</h3>
+    <div class="formerror" id="room-form-error"></div>
+    <div class="field"><label>Name</label><input type="text" id="rm-name"></div>
+    <div class="field"><label>Slug (URL-friendly, unique)</label><input type="text" id="rm-slug"></div>
+    <div class="field"><label>Type</label><input type="text" id="rm-type" placeholder="Standard, Cabin, Suite, Loft"></div>
+    <div class="field"><label>Bed type</label><input type="text" id="rm-bedtype"></div>
+    <div class="field"><label>Description</label><textarea id="rm-desc" rows="3"></textarea></div>
+    <div class="rowgap">
+      <div class="field"><label>Price / night</label><input type="number" id="rm-price" min="0"></div>
+      <div class="field"><label>Max guests</label><input type="number" id="rm-maxguests" min="1"></div>
+    </div>
+    <div class="field"><label>Total units (physical rooms of this type)</label><input type="number" id="rm-units" min="1"></div>
+    <div class="field"><label>Amenities (comma separated)</label><input type="text" id="rm-amenities" placeholder="Free wifi, Fireplace, ..."></div>
+    <div class="field"><label>Image path</label><input type="text" id="rm-image" placeholder="/img/example.png"></div>
+    <button class="btn btn-primary btn-block" id="room-modal-save" style="width:100%;margin-top:8px;">Save room</button>
+    <button class="btn btn-ghost btn-block" id="room-modal-cancel" style="width:100%;margin-top:8px;">Cancel</button>
+  </div>
+</div>
 
 <div id="footer-root"></div>
 <script src="/js/api.js"></script>
 <script src="/js/chrome.js"></script>
 <script>
-(function init() {
+let CURRENT_TAB = 'bookings';
+let ROOMS_CACHE = [];
+let EDITING_ROOM_ID = null;
+
+(async function init() {
   if (!requireAuth()) return;
   const user = getUser();
   if (!user || user.role !== 'admin') {
-    document.getElementById('admin-body').innerHTML = '<h3>Admin access required</h3><p>This page is for lodge administrators only.</p>';
+    document.getElementById('admin-denied').style.display = 'block';
     return;
   }
   document.getElementById('admin-sub').textContent = `Signed in as ${user.name} · Administrator`;
+  document.getElementById('admin-content').style.display = 'block';
+
+  await loadStats();
+  await loadTab('bookings');
+
+  document.querySelectorAll('.admintabs button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.admintabs button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadTab(btn.dataset.tab);
+    });
+  });
 })();
+
+async function loadStats() {
+  try {
+    const s = await api('/admin/stats', { auth: true });
+    document.getElementById('stat-grid').innerHTML = `
+      <div class="stat-card"><div class="num">${s.totalBookings}</div><div class="lbl">Total bookings</div></div>
+      <div class="stat-card"><div class="num">${Money(s.revenue)}</div><div class="lbl">Revenue (est.)</div></div>
+      <div class="stat-card"><div class="num">${s.occupancyRate}%</div><div class="lbl">Occupancy today</div></div>
+      <div class="stat-card"><div class="num">${s.roomTypeCount}</div><div class="lbl">Room types</div></div>
+    `;
+  } catch (err) {
+    document.getElementById('stat-grid').innerHTML = `<div class="empty" style="grid-column:1/-1;"><p>${err.message}</p></div>`;
+  }
+}
+
+async function loadTab(tab) {
+  CURRENT_TAB = tab;
+  const body = document.getElementById('tab-body');
+  body.innerHTML = '<div class="empty"><span class="spinner"></span> Loading…</div>';
+  if (tab === 'bookings') return loadBookingsTab();
+  if (tab === 'rooms') return loadRoomsTab();
+  if (tab === 'messages') return loadMessagesTab();
+}
+
+async function loadBookingsTab() {
+  const body = document.getElementById('tab-body');
+  try {
+    const { bookings } = await api('/bookings', { auth: true });
+    if (!bookings.length) {
+      body.innerHTML = `<div class="empty"><h3>No bookings yet</h3><p>Bookings made on the site will appear here.</p></div>`;
+      return;
+    }
+    body.innerHTML = `
+      <div class="admincard">
+        <div class="admincard-head"><h3 style="font-size:16px;">All bookings</h3><span style="font-size:13px;color:var(--ink-soft);">${bookings.length} total</span></div>
+        <div class="tablewrap">
+          <table class="admin">
+            <thead><tr><th>Guest</th><th>Room</th><th>Dates</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <tbody id="admin-booking-rows"></tbody>
+          </table>
+        </div>
+      </div>`;
+    const rows = document.getElementById('admin-booking-rows');
+    rows.innerHTML = bookings.map((b) => `
+      <tr>
+        <td>${b.guestName}<br><span style="color:var(--ink-soft);font-size:12px;">${b.guestEmail}</span></td>
+        <td>${b.room ? b.room.name : 'Room'}</td>
+        <td>${new Date(b.checkIn).toLocaleDateString()} → ${new Date(b.checkOut).toLocaleDateString()}</td>
+        <td>${Money(b.total)}</td>
+        <td><span class="badge ${b.status}">${b.status}</span></td>
+        <td>
+          ${b.status === 'pending' ? `<button class="btn btn-ghost btn-sm bk-confirm" data-id="${b._id}">Confirm</button>` : ''}
+          ${b.status !== 'cancelled' ? `<button class="btn btn-ghost btn-sm bk-cancel" data-id="${b._id}">Cancel</button>` : ''}
+        </td>
+      </tr>
+    `).join('');
+    rows.querySelectorAll('.bk-confirm').forEach((btn) => btn.addEventListener('click', () => setBookingStatus(btn.dataset.id, 'confirmed')));
+    rows.querySelectorAll('.bk-cancel').forEach((btn) => btn.addEventListener('click', () => setBookingStatus(btn.dataset.id, 'cancelled')));
+  } catch (err) {
+    body.innerHTML = `<div class="empty"><h3>Could not load bookings</h3><p>${err.message}</p></div>`;
+  }
+}
+
+async function setBookingStatus(id, status) {
+  try {
+    await api(`/bookings/${id}/status`, { method: 'PATCH', auth: true, body: { status } });
+    showToast(`Booking ${status}.`);
+    await loadStats();
+    loadBookingsTab();
+  } catch (err) {
+    showToast(err.message || 'Could not update booking.');
+  }
+}
+
+async function loadRoomsTab() {
+  const body = document.getElementById('tab-body');
+  try {
+    const { rooms } = await api('/rooms');
+    ROOMS_CACHE = rooms;
+    body.innerHTML = `
+      <div class="admincard">
+        <div class="admincard-head"><h3 style="font-size:16px;">Manage rooms</h3><button class="btn btn-primary btn-sm" id="admin-add-room">+ Add room</button></div>
+        <div class="tablewrap">
+          <table class="admin">
+            <thead><tr><th>Room</th><th>Type</th><th>Price / night</th><th>Max guests</th><th>Units</th><th></th></tr></thead>
+            <tbody id="admin-room-rows"></tbody>
+          </table>
+        </div>
+      </div>`;
+    const rows = document.getElementById('admin-room-rows');
+    rows.innerHTML = rooms.map((r) => `
+      <tr>
+        <td>${r.name}</td><td>${r.type}</td><td>${Money(r.pricePerNight)}</td><td>${r.maxGuests}</td><td>${r.totalUnits}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm room-edit" data-id="${r._id}">Edit</button>
+          <button class="btn btn-ghost btn-sm room-del" data-id="${r._id}">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+    document.getElementById('admin-add-room').addEventListener('click', () => openRoomModal(null));
+    rows.querySelectorAll('.room-edit').forEach((btn) => btn.addEventListener('click', () => openRoomModal(btn.dataset.id)));
+    rows.querySelectorAll('.room-del').forEach((btn) => btn.addEventListener('click', () => deleteRoom(btn.dataset.id)));
+  } catch (err) {
+    body.innerHTML = `<div class="empty"><h3>Could not load rooms</h3><p>${err.message}</p></div>`;
+  }
+}
+
+function openRoomModal(roomId) {
+  EDITING_ROOM_ID = roomId;
+  document.getElementById('room-form-error').classList.remove('show');
+  const room = roomId ? ROOMS_CACHE.find((r) => r._id === roomId) : null;
+
+  document.getElementById('room-modal-title').textContent = room ? 'Edit room' : 'Add room';
+  document.getElementById('rm-name').value = room ? room.name : '';
+  document.getElementById('rm-slug').value = room ? room.slug : '';
+  document.getElementById('rm-type').value = room ? room.type : '';
+  document.getElementById('rm-bedtype').value = room ? room.bedType : '';
+  document.getElementById('rm-desc').value = room ? room.description : '';
+  document.getElementById('rm-price').value = room ? room.pricePerNight : '';
+  document.getElementById('rm-maxguests').value = room ? room.maxGuests : '';
+  document.getElementById('rm-units').value = room ? room.totalUnits : '';
+  document.getElementById('rm-amenities').value = room ? room.amenities.join(', ') : '';
+  document.getElementById('rm-image').value = room ? (room.image || '') : '';
+
+  document.getElementById('room-modal-bg').style.display = 'flex';
+}
+
+document.getElementById('room-modal-cancel').addEventListener('click', () => {
+  document.getElementById('room-modal-bg').style.display = 'none';
+});
+
+document.getElementById('room-modal-save').addEventListener('click', async () => {
+  const errorBox = document.getElementById('room-form-error');
+  errorBox.classList.remove('show');
+
+  const payload = {
+    name: document.getElementById('rm-name').value.trim(),
+    slug: document.getElementById('rm-slug').value.trim().toLowerCase(),
+    type: document.getElementById('rm-type').value.trim(),
+    bedType: document.getElementById('rm-bedtype').value.trim(),
+    description: document.getElementById('rm-desc').value.trim(),
+    pricePerNight: Number(document.getElementById('rm-price').value),
+    maxGuests: Number(document.getElementById('rm-maxguests').value),
+    totalUnits: Number(document.getElementById('rm-units').value),
+    amenities: document.getElementById('rm-amenities').value.split(',').map((s) => s.trim()).filter(Boolean),
+    image: document.getElementById('rm-image').value.trim(),
+  };
+
+  if (!payload.name || !payload.slug || !payload.type || !payload.bedType || !payload.description || !payload.pricePerNight || !payload.maxGuests || !payload.totalUnits) {
+    errorBox.textContent = 'Fill in all fields (amenities and image are optional).';
+    errorBox.classList.add('show');
+    return;
+  }
+
+  try {
+    if (EDITING_ROOM_ID) {
+      await api(`/rooms/${EDITING_ROOM_ID}`, { method: 'PUT', auth: true, body: payload });
+      showToast('Room updated.');
+    } else {
+      await api('/rooms', { method: 'POST', auth: true, body: payload });
+      showToast('Room created.');
+    }
+    document.getElementById('room-modal-bg').style.display = 'none';
+    loadRoomsTab();
+    loadStats();
+  } catch (err) {
+    errorBox.textContent = err.message || 'Could not save room.';
+    errorBox.classList.add('show');
+  }
+});
+
+async function deleteRoom(id) {
+  try {
+    await api(`/rooms/${id}`, { method: 'DELETE', auth: true });
+    showToast('Room deactivated.');
+    loadRoomsTab();
+    loadStats();
+  } catch (err) {
+    showToast(err.message || 'Could not delete room.');
+  }
+}
+
+async function loadMessagesTab() {
+  const body = document.getElementById('tab-body');
+  try {
+    const { messages } = await api('/messages', { auth: true });
+    if (!messages.length) {
+      body.innerHTML = `<div class="empty"><h3>No messages</h3><p>Contact form submissions will appear here.</p></div>`;
+      return;
+    }
+    body.innerHTML = `
+      <div class="admincard">
+        <div class="admincard-head"><h3 style="font-size:16px;">Guest messages</h3></div>
+        <div class="tablewrap">
+          <table class="admin">
+            <thead><tr><th>Name</th><th>Email</th><th>Message</th><th>Received</th></tr></thead>
+            <tbody>
+              ${messages.map((m) => `<tr><td>${m.name}</td><td>${m.email}</td><td>${m.message}</td><td>${new Date(m.createdAt).toLocaleDateString()}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  } catch (err) {
+    body.innerHTML = `<div class="empty"><h3>Could not load messages</h3><p>${err.message}</p></div>`;
+  }
+}
 </script>
 </body>
 </html>

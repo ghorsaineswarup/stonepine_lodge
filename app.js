@@ -6,6 +6,7 @@ const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/rooms');
 const messageRoutes = require('./routes/messages');
 const bookingRoutes = require('./routes/bookings');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/admin', adminRoutes);
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
 app.use(express.static(path.join(__dirname, 'public')));

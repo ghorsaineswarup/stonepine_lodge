@@ -56,7 +56,7 @@ const params = new URLSearchParams(location.search);
 const slug = params.get('slug');
 let ROOM = null;
 
-const ROOM_IMAGES = {
+const LEGACY_IMAGES = {
   'trailhead-room': '/img/trailhead-room.png',
   'hearth-cabin': '/img/hearth-cabin.png',
   'ridge-suite': '/img/ridge-suite.png',
@@ -88,7 +88,7 @@ function render(r) {
   document.getElementById('rd-amenities').innerHTML = r.amenities.map((a) => `<li>${a}</li>`).join('');
   document.getElementById('rd-price').innerHTML = `${Money(r.pricePerNight)}<small style="font-size:13px;color:var(--ink-soft);"> / night</small>`;
 
-  const img = ROOM_IMAGES[r.slug];
+  const img = r.image || LEGACY_IMAGES[r.slug];
   document.getElementById('rd-gal-main').innerHTML = img ? `<img src="${img}" alt="${r.name}">` : '';
 
   const gsel = document.getElementById('bk-guests');

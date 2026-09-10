@@ -1,10 +1,10 @@
 const express = require('express');
 const Message = require('../models/Message');
+const { protect, adminOnly } = require('../middleware/auth');
 
 const router = express.Router();
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// POST /api/messages - public contact form
 router.post('/', async (req, res) => {
   try {
     const { name, email, message } = req.body;
@@ -18,6 +18,15 @@ router.post('/', async (req, res) => {
     res.status(201).json({ message: doc });
   } catch (err) {
     res.status(500).json({ message: 'Could not send message', error: err.message });
+  }
+});
+
+router.get('/', protect, adminOnly, async (req, res) => {
+  try {
+    const messages = await Message.find().sort({ createdAt: -1 });
+    res.json({ messages });
+  } catch (err) {
+    res.status(500).json({ message: 'Could not load messages', error: err.message });
   }
 });
 

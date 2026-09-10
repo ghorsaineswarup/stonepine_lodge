@@ -11,6 +11,7 @@ const roomSchema = new mongoose.Schema(
     maxGuests: { type: Number, required: true, min: 1 },
     totalUnits: { type: Number, required: true, min: 1, default: 1 },
     amenities: [{ type: String }],
+    image: { type: String, default: '' },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }
